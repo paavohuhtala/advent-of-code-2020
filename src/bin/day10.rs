@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use itertools::Itertools;
 
 fn main() {
@@ -7,8 +9,8 @@ fn main() {
         .map(|line| line.parse::<u64>().unwrap())
         .collect::<Vec<_>>();
 
-    println!("{}", day10a(&input));
-    println!("{}", day10b(&input));
+    println!("a {}", day10a(&input));
+    println!("b {}", day10b(&input));
 }
 
 fn day10a(input: &[u64]) -> usize {
@@ -33,18 +35,40 @@ fn day10a(input: &[u64]) -> usize {
 fn day10b(input: &[u64]) -> usize {
     let mut sorted_input = input.to_vec();
     sorted_input.sort();
-
-    sorted_input.insert(0, 0);
-
     let target = *sorted_input.last().unwrap();
 
-    let hmmmm = sorted_input
-        .iter()
-        .combinations(3)
-        .take(50)
-        .collect::<Vec<_>>();
+    fn count_ways(
+        target: u64,
+        current: u64,
+        remaining: &[u64],
+        count_cache: &mut HashMap<u64, usize>,
+    ) -> usize {
+        if current == target {
+            return 1;
+        }
 
-    println!("{:?}", hmmmm);
+        match count_cache.get(&current) {
+            Some(value) => {
+                return *value;
+            }
+            None => {}
+        };
 
-    0
+        let mut total = 0;
+
+        for (i, &next) in remaining.iter().enumerate() {
+            if next > current + 3 {
+                break;
+            }
+
+            total += count_ways(target, next, &remaining[i + 1..], count_cache);
+        }
+
+        count_cache.insert(current, total);
+
+        return total;
+    }
+
+    let mut count_cache: HashMap<u64, usize> = HashMap::new();
+    count_ways(target, 0, &sorted_input, &mut count_cache)
 }
