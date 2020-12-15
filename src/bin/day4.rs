@@ -4,22 +4,14 @@ use regex;
 
 fn main() {
     let input = include_str!("input4.txt");
-    println!("1a {:?}", day4a(input));
+    println!("4b {:?}", day4b(input));
 }
 
-fn day4a(input: &str) -> usize {
-    let passport_values_regex = regex::Regex::new(r"([a-z]+):([a-z0-9#]+)[\n ]").unwrap();
-
+fn day4b(input: &str) -> usize {
+    let passport_values_regex = regex::Regex::new(r"([a-z]+):([a-z0-9#]+)[\n ]?").unwrap();
     let keys = ["byr", "iyr", "eyr", "hgt", "hcl", "ecl", "pid"];
 
     let mut field_validators: HashMap<&str, fn(&str) -> bool> = HashMap::new();
-    /*field_validators.insert(
-        "byr",
-        regex::Regex::new(r"(192[0-9])|(19[3-9][0-9])|(200[0-2])").unwrap(),
-    );
-    field_validators.insert("iyr", regex::Regex::new(r"(201[0-9])|2020").unwrap());
-    field_validators.insert("eyr", regex::Regex::new(r"(202[0-9])|2030").unwrap());
-    field_validators.insert("hgt", regex::Regex::new(r"(202[0-9])|2030").unwrap());*/
 
     field_validators.insert("byr", |year: &str| {
         let year: u32 = year.parse().unwrap();
@@ -57,7 +49,7 @@ fn day4a(input: &str) -> usize {
     });
 
     field_validators.insert("hcl", |color| {
-        let hex_color_regex = regex::Regex::new(r"#[0-9a-f]{6}").unwrap();
+        let hex_color_regex = regex::Regex::new(r"^#[0-9a-f]{6}$").unwrap();
         hex_color_regex.is_match(color)
     });
 
@@ -66,7 +58,7 @@ fn day4a(input: &str) -> usize {
     });
 
     field_validators.insert("pid", |pid| {
-        let pid_regex = regex::Regex::new(r"[0-9]{9}").unwrap();
+        let pid_regex = regex::Regex::new(r"^[0-9]{9}$").unwrap();
         pid_regex.is_match(pid)
     });
 
@@ -81,18 +73,14 @@ fn day4a(input: &str) -> usize {
             passport.insert(key.as_str().to_string(), value.as_str().to_string());
         }
 
-        println!("{:?}", passport);
-
         for key in &keys {
             let entry = passport.get(&key.to_string());
             match entry {
                 None => {
-                    // println!("\tmissing key {:?}", key);
                     continue 'main;
                 }
                 Some(value) => {
                     if !(field_validators.get(key).unwrap())(value) {
-                        println!("invalid field {:?}", key);
                         continue 'main;
                     }
                 }
