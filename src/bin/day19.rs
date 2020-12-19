@@ -4,15 +4,15 @@ fn main() {
     let input = include_str!("./input19.rules.txt");
     let mut rules = parse_rules(input);
 
-    rules.insert(8, Rule::Many1(Box::new(MaybeRefRule::Ref(42))));
+    /*rules.insert(8, Rule::Many1(Box::new(MaybeRefRule::Ref(42))));
 
     rules.insert(
         11,
         Rule::Seq(vec![
             MaybeRefRule::Owned(Rule::Many1(Box::new(MaybeRefRule::Ref(42)))),
-            MaybeRefRule::Ref(31),
+            MaybeRefRule::Owned(Rule::Many1(Box::new(MaybeRefRule::Ref(31)))),
         ]),
-    );
+    );*/
 
     /*rules.insert(
         0,
@@ -66,6 +66,7 @@ enum MaybeRefRule {
 
 fn parse_rules(input: &str) -> HashMap<u32, Rule> {
     fn parse_line(line: &str) -> (u32, Rule) {
+        let line = line.trim();
         let id = line.split(":").next().unwrap().parse::<u32>().unwrap();
         let line = line.split(": ").skip(1).next().unwrap();
 
@@ -104,7 +105,11 @@ fn parse_rules(input: &str) -> HashMap<u32, Rule> {
         }
     }
 
-    input.lines().map(parse_line).collect()
+    input
+        .lines()
+        .filter(|line| line.len() > 0)
+        .map(parse_line)
+        .collect()
 }
 
 fn resolve_rule<'a>(rule: &'a MaybeRefRule, rules: &'a HashMap<u32, Rule>) -> &'a Rule {
@@ -174,6 +179,84 @@ fn test_rule<'a>(
                 },
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    macro_rules! assert_pattern_matches {
+        ($rules: expr, pass: [$($pattern_ok: expr),*], fail: [$($pattern_fail: expr),*]) => {
+            let rules = parse_rules($rules);
+            let output: &[char] = &[];
+            let rule = rules.get(&0).unwrap();
+
+            $({
+                let input: Vec<char> = $pattern_ok.chars().collect();
+                assert_eq!(Some(output), test_rule(&input, &rule, &rules));
+            })*;
+
+            $({
+                let input: Vec<char> = $pattern_fail.chars().collect();
+                assert_eq!(None, test_rule(&input, &rule, &rules));
+            })*
+        }
+    }
+
+    #[test]
+    fn many1_one() {
+        let input: Vec<char> = "a".chars().collect();
+        let output: &[char] = &[];
+        let rule = Rule::Many1(Box::new(MaybeRefRule::Owned(Rule::Terminal('a'))));
+        let rules = HashMap::new();
+        assert_eq!(Some(output), test_rule(&input, &rule, &rules));
+    }
+
+    #[test]
+    fn many1_none() {
+        let input: Vec<char> = "".chars().collect();
+        let rule = Rule::Many1(Box::new(MaybeRefRule::Owned(Rule::Terminal('a'))));
+        let rules = HashMap::new();
+        assert_eq!(None, test_rule(&input, &rule, &rules));
+    }
+
+    #[test]
+    fn many1_many() {
+        let input: Vec<char> = "aaaa".chars().collect();
+        let rule = Rule::Many1(Box::new(MaybeRefRule::Owned(Rule::Terminal('a'))));
+        let rules = HashMap::new();
+        let output: &[char] = &[];
+        assert_eq!(Some(output), test_rule(&input, &rule, &rules));
+    }
+
+    #[test]
+    fn many1_many_twice() {
+        let input: Vec<char> = "aaaabbbb".chars().collect();
+        let rule = Rule::Seq(vec![
+            MaybeRefRule::Owned(Rule::Many1(Box::new(MaybeRefRule::Owned(Rule::Terminal(
+                'a',
+            ))))),
+            MaybeRefRule::Owned(Rule::Many1(Box::new(MaybeRefRule::Owned(Rule::Terminal(
+                'b',
+            ))))),
+        ]);
+
+        let rules = HashMap::new();
+        let output: &[char] = &[];
+        assert_eq!(Some(output), test_rule(&input, &rule, &rules));
+    }
+
+    #[test]
+    fn or_basic() {
+        assert_pattern_matches!(
+            r#"
+            1: "a"
+            2: "b"
+            0: 1 2 | 2 1"#,
+            pass: ["ab", "ba"],
+            fail: []
+        );
     }
 }
 
